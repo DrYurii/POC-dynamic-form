@@ -1,0 +1,65 @@
+{
+  "US": [
+    { "name": "national_id", "label": "National ID", "type": "string", "required": true },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 11] },
+    { "name": "email", "label": "Email", "type": "string", "required": true },
+    { "name": "tax_id", "label": "Tax Identification Number", "type": "string", "required": false }
+  ],
+  "DE": [
+    { "name": "passport", "label": "Passport Number", "type": "string", "required": true },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "tax_id", "label": "Tax Identification Number", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 15] },
+    { "name": "employment_status", "label": "Employment Status", "type": "string", "required": false }
+  ],
+  "FR": [
+    { "name": "health_id", "label": "Health ID", "type": "string", "required": true },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 10] },
+    { "name": "email", "label": "Email", "type": "string", "required": false },
+    { "name": "residency_status", "label": "Residency Status", "type": "string", "required": true }
+  ],
+  "UK": [
+    { "name": "passport", "label": "Passport Number", "type": "string", "required": true },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 11] },
+    { "name": "email", "label": "Email", "type": "string", "required": true },
+    { "name": "national_id", "label": "National ID", "type": "string", "required": false }
+  ],
+  "AU": [
+    { "name": "tax_id", "label": "Tax Identification Number", "type": "string", "required": true },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "email", "label": "Email", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [9, 10] },
+    { "name": "employment_status", "label": "Employment Status", "type": "string", "required": false }
+  ],
+  "CA": [
+    { "name": "sin", "label": "Social Insurance Number", "type": "string", "required": true },
+    { "name": "passport", "label": "Passport Number", "type": "string", "required": false },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "email", "label": "Email", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 10] }
+  ],
+  "BR": [
+    { "name": "cpf", "label": "CPF (Cadastro de Pessoas Físicas)", "type": "string", "required": true },
+    { "name": "passport", "label": "Passport Number", "type": "string", "required": false },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 11] },
+    { "name": "email", "label": "Email", "type": "string", "required": false }
+  ],
+  "MX": [
+    { "name": "curp", "label": "CURP", "type": "string", "required": true },
+    { "name": "passport", "label": "Passport Number", "type": "string", "required": false },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 13] },
+    { "name": "email", "label": "Email", "type": "string", "required": false }
+  ],
+  "IN": [
+    { "name": "aadhar", "label": "Aadhar Number", "type": "string", "required": true },
+    { "name": "passport", "label": "Passport Number", "type": "string", "required": false },
+    { "name": "dob", "label": "Date of Birth", "type": "string", "required": true },
+    { "name": "phone", "label": "Phone Number", "type": "phone", "required": true, "phone_length": [10, 10] },
+    { "name": "email", "label": "Email", "type": "string", "required": false }
+  ]
+}

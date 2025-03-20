@@ -1,104 +1,125 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const { z } = require('zod');
 
 const app = express();
 
-// Enable CORS (allows frontend to call API)
+// Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json());
 
-// PostgreSQL Connection
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+// Load country settings from JSON file
+const countrySettingsPath = path.join(__dirname, 'countrySettings.json');
+let countrySettings = {};
 
-// Test database connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Error connecting to database:', err);
-  } else {
-    console.log('Connected to PostgreSQL database');
-    release();
-  }
-});
-
-// API: Get form fields based on country
-app.get('/api/form/:country', async (req, res) => {
-  const { country } = req.params;
-  console.log(`Fetching form fields for country: ${country}`);
-
+const loadCountrySettings = () => {
   try {
-    const query = `
-      SELECT name, label, type, 
-             CASE 
-                 WHEN $1 = ANY(hidden_in) THEN 'hidden'
-                 WHEN $1 = ANY(required_in) THEN 'required'
-                 ELSE 'optional'
-             END AS visibility
-      FROM form_fields`;
-
-    const { rows } = await pool.query(query, [country]);
-    const filteredFields = rows.filter(field => field.visibility !== 'hidden');
-
-    console.log(`Form fields retrieved:`, filteredFields);
-    res.json(filteredFields);
+    const data = fs.readFileSync(countrySettingsPath, 'utf-8');
+    countrySettings = JSON.parse(data);
   } catch (error) {
-    console.error('Database query error:', error);
-    res.status(500).json({ error: 'Database query error', details: error.message });
+    console.error('Error loading country settings:', error);
   }
+};
+
+// Load settings at startup
+loadCountrySettings();
+
+// API: Get form fields for a specific country
+app.get('/api/form/:country', (req, res) => {
+  const { country } = req.params;
+  const fields = countrySettings[country];
+
+  if (!fields) {
+    return res.status(404).json({ error: 'Country settings not found' });
+  }
+
+  res.json(fields);
 });
 
-// API: Submit form data
-app.post('/api/submit-form', async (req, res) => {
-  const { country, formData } = req.body;
+// Function to generate Zod schema dynamically
+const generateZodSchema = (fields) => {
+  const schemaShape = {};
 
-  if (!country) {
-    return res.status(400).json({ error: 'Country is required' });
-  }
+  fields.forEach(field => {
+    let fieldSchema;
 
-  console.log(`Received form submission from ${country}:`, formData);
-
-  try {
-    // Fetch form validation rules from the database
-    const query = `
-      SELECT name, 
-             CASE 
-                 WHEN $1 = ANY(hidden_in) THEN 'hidden'
-                 WHEN $1 = ANY(required_in) THEN 'required'
-                 ELSE 'optional'
-             END AS visibility
-      FROM form_fields`;
-
-    const { rows } = await pool.query(query, [country]);
-
-    // Validate form data
-    for (const field of rows) {
-      if (field.visibility === 'hidden' && formData[field.name]) {
-        return res.status(400).json({ error: `${field.name} is not allowed in ${country}` });
-      }
-      if (field.visibility === 'required' && !formData[field.name]) {
-        return res.status(400).json({ error: `${field.name} is required in ${country}` });
-      }
+    switch (field.type) {
+      case 'string':
+        fieldSchema = z.string().min(1, `${field.label} cannot be empty`);
+        break;
+      case 'number':
+        fieldSchema = z.preprocess((val) => Number(val), z.number().positive("Must be a positive number"));
+        break;
+      case 'date':
+        fieldSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)");
+        break;
+      case 'email':
+        fieldSchema = z.string().email("Invalid email format");
+        break;
+      case 'phone':
+        const minLength = field.phone_length ? field.phone_length[0] : 10;
+        const maxLength = field.phone_length ? field.phone_length[1] : 15;
+        fieldSchema = z.string()
+          .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format")
+          .min(minLength, `Phone number must be at least ${minLength} digits`)
+          .max(maxLength, `Phone number must not exceed ${maxLength} digits`);
+        break;
+      default:
+        fieldSchema = z.any();
     }
 
-    // Save form data
-    await pool.query(
-      `INSERT INTO user_submissions (country, data) VALUES ($1, $2)`,
-      [country, JSON.stringify(formData)]
-    );
+    if (field.required) {
+      schemaShape[field.name] = fieldSchema;
+    } else {
+      schemaShape[field.name] = fieldSchema.optional();
+    }
+  });
 
-    res.json({ message: 'Form submitted successfully' });
-  } catch (error) {
-    console.error('Form submission error:', error);
-    res.status(500).json({ error: 'Error saving form', details: error.message });
+  return z.object(schemaShape);
+};
+
+
+// API: Submit form data with validation
+app.post('/api/submit-form', (req, res) => {
+  const { country, formData } = req.body;
+
+  if (!country || !formData) {
+    return res.status(400).json({ error: 'Country and formData are required' });
   }
+
+  const fields = countrySettings[country];
+
+  if (!fields) {
+    return res.status(400).json({ error: 'Invalid country' });
+  }
+
+  const schema = generateZodSchema(fields);
+  
+  console.log('Validating submission:', JSON.stringify(formData, null, 2));
+
+  const validation = schema.safeParse(formData);
+
+  console.log('🔍 Validation result:', JSON.stringify(validation, null, 2));
+
+  if (!validation.success) {
+    console.error('Validation failed:', validation.error.format());
+    return res.status(400).json({ error: 'Validation failed', details: validation.error.format() });
+  }
+
+  console.log('Form submission valid:', formData);
+
+  res.json({ message: 'Form submitted successfully' });
 });
+
+
+
+app.get('/api/countries', (req, res) => {
+  const availableCountries = Object.keys(countrySettings);
+  res.json(availableCountries);
+});
+
 
 // Start server
 const PORT = process.env.PORT || 3000;
